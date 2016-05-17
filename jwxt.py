@@ -12,10 +12,9 @@ from contextlib import closing
 import sqlite3
 
 class JWXT:
-    def __init__(self, username, password):
+    def __init__(self, username):
         self.username = username
-        self.password = password
-        self.encryptPass = self.encryptPassword()
+        self.dbSite = username + 'Jwxt.db'
         self.captchaSite = 'captcha.jpeg'
         self.loginUrl = 'http://wjw.sysu.edu.cn/mjwxt/sign_in'
         self.captchaUrl = 'http://wjw.sysu.edu.cn/api/get_captcha'
@@ -26,9 +25,132 @@ class JWXT:
         self.session = requests.Session()
         self.tryTime = 0
         
-    def encryptPassword(self): 
+    def menu(self):
+        self.printUser()
+        print 'Please input number to choose function'
+        print '1.add user'
+        print '2.delete user'
+        print '3.get mark'
+        choose = raw_input()
+        if choose == '1':
+            self.addUser()
+        elif choose == '2':
+            self.deleteUser()
+        elif choose == '3':
+            self.getUserMark()
+        else:
+            print 'Your input is not legal.'
+            self.menu()
+
+    def getUserMark(self):
+        error = None
+        print 'Please input the username that you want to get mark.'
+        print "Or input \"ALL\" to get all users' mark"
+        print 'And enter back to go back to the menu'
+        username = input('Please input the username:')
+        if username == 'back' :
+            return self.menu()
+        error = self.is_valid(username, 'Mirror', 'getMark')
+        if error is None:
+                self.getMarkBegin(username)
+        else:
+            print error
+            return self.menu()
+
+    def addUser(self):
+        print 'Please iuput the username and password to add a new user.'
+        print 'And enter back to go back to the menu'
+        error = None
+        username = raw_input('Please input the username:')
+        if username == 'back' :
+            return self.menu()
+        password = raw_input('Please input the password:')
+        error = self.is_valid(username, password, 'add')
+        if error is None:
+            self.insertUser(username, password)
+            print 'Add success.'
+            return self.menu()
+        else:
+            print error
+            return self.menu()
+
+    def deleteUser(self):
+        print 'Please iuput the username to delete a new user.'
+        print 'And enter back to go back to the menu'
+        error = None
+        username = raw_input('Please input the username:')
+        if username == 'back' :
+            return self.menu()
+        error = self.is_valid(username, 'Mirror', 'delete')
+        if error is None:
+            self.eraseUser(username)
+            print 'Delete success.'
+            return self.menu()
+        else:
+            print error
+            return self.menu()
+
+    def insertUser(self, username, password):
+        g = self.connect_db()
+        encrypt_password = self.encryptPassword(password)
+        g.execute('insert into users(username,password) values (?, ?)',
+                         [username, encrypt_password])
+        g.commit()
+        g.close()
+
+    def eraseUser(self, username):
+        g = self.connect_db()
+        g.execute('delete from users where username = (?)',
+                         [username])
+        g.commit()
+        g.close()
+
+    def printUser(self):
+        g = self.connect_db()
+        cur = g.cursor().execute('select username from users')
+        userList = [str(row[0])  for row in cur.fetchall()]
+        print 'Now the userlist is:'
+        for i in userList:
+            print i
+        g.close()
+
+    def is_valid(self, username, password, s):
+        g = self.connect_db()
+        error = None
+        if username == '' or password == '':
+            error = 'The username and password could not be empty.'
+            return error
+        if(s == 'add'):
+            cur = g.cursor().execute('select username from users')
+            userList = [str(row[0])  for row in cur.fetchall()]
+            if str(username) in userList:
+                error = 'the user has been added.'
+        elif(s == 'delete'):
+            cur = g.cursor().execute('select username from users')
+            userList = [str(row[0])  for row in cur.fetchall()]
+            if str(username) not in userList:
+                error = 'Cannot find the user.'
+        elif(s == 'getMark'):
+            cur = g.cursor().execute('select username from users')
+            userList = [str(row[0])  for row in cur.fetchall()]
+            print userList
+            print username
+            if str(username) not in userList:
+                error = 'Cannot find the user.'
+        g.close()
+        return error
+
+    def getPassword(self,username):
+        g = self.connect_db()
+        cur = g.cursor().execute('select password from users where username = (?)',
+            [username])
+        passwordList = [str(row[0])  for row in cur.fetchall()]
+        return passwordList[0]
+        g.close()
+
+    def encryptPassword(self, password): 
         m = hashlib.md5()   
-        m.update(self.password)   
+        m.update(password)   
         pubkey = 'b6b992d57695d296c6de1ee330a464bf30f21ead1af10fd923a109e9b32efbc1d197663163818f3537c92944f780d7ba00bf830c073974d67d2adfb8bb89306b'
         rsaPublickey = int(pubkey, 16)
         key = rsa.PublicKey(rsaPublickey, 65537) #创建公钥
@@ -48,16 +170,22 @@ class JWXT:
         im.close()
         return text.replace(' ','').strip()
 
-    def login(self):
+    def getMarkBegin(self, username):
+        if username == 'ALL':
+            print 'aha'
+        else:
+            self.login(username)
+    def login(self,username):
             self.tryTime+=1
-            print 'This is #%d try' % (self.tryTime)
+            print 'This is #%d try in %s' % (self.tryTime, username) 
             self.getCaptcha()
             self.cpatcha = self.killCpatcha()
             data = {
-                'username':self.username,
-                'password':self.encryptPass,
+                'username':username,
+                'password':self.getPassword(username),
                 'captcha':self.cpatcha
         	}
+            print self.getPassword(username)
             response = self.session.post(self.loginUrl, data).content
             if(response.find(self.loginSuccess) != -1) :
                 print 'Login Success'
@@ -68,8 +196,8 @@ class JWXT:
                 if(self.tryTime > 2):
                     print'Login failed. Please check your username and password.'
                     self.tryTime = 0
-                    return
-                self.login()
+                    return self.getUserMark()
+                self.login(username)
             return response    
 
     def getMark(self):
@@ -98,3 +226,5 @@ class JWXT:
                 #string = r"Subject Name: {name}   Teacher's name: NULL   Credit: {credit}   Score: {score}   Point: {point} Rank: {rank}/{total}".format(name = s[0],  credit = s[1], score = s[2], point = s[3], rank = s[4], total = s[5])
                 #print string
             #self.getMark()
+    def connect_db(self):
+        return sqlite3.connect(self.dbSite)

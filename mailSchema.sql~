@@ -1,0 +1,6 @@
+drop table if exists users;
+create table mail (
+  id integer primary key autoincrement,
+  mailAddress string not null,
+  password string not null
+);
