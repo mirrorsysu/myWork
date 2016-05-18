@@ -13,6 +13,7 @@ class GNYM():
         if username == None:
             return self.menu()
         self.chooseFunction(username)
+        return self.menu()
 
     def chooseFunction(self,username):
         print 'Welcome to the learning helper'
@@ -28,7 +29,7 @@ class GNYM():
             print 'mail'
         elif choose == '3':
             self.glxtLogin.logout();
-            return menu
+            return menu()
         else:
             print 'Your input is not legal.'
 

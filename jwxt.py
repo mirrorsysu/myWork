@@ -14,6 +14,7 @@ import sqlite3
 class JWXT:
     def __init__(self, username):
         self.username = username
+        self.nowUsername = ''
         self.dbSite = username + 'Jwxt.db'
         self.captchaSite = 'captcha.jpeg'
         self.loginUrl = 'http://wjw.sysu.edu.cn/mjwxt/sign_in'
@@ -22,9 +23,13 @@ class JWXT:
         self.loginSuccess = '<title>学分绩点 - SYSU 学生微教务</title>'
         self.markMatch = re.compile(r'"kcmc":"(.*?)".*?"xf":"(.*?)".*?"zzcj":"(.*?)".*?"jd":"(.*?)".*?"jsxm":"(.*?)".*?"jxbpm":"(.*?)\\/(.*?)"')
         #self.markMatchNoTeacher = re.compile(r'"kcmc":"(.*?)".*?"xf":"(.*?)".*?"zzcj":"(.*?)".*?"jd":"(.*?)","bzw":".*?","sftg":"1","jxbpm":"(.*?)\\/(.*?)"')
-        self.session = requests.Session()
         self.tryTime = 0
-        
+        self.data = {
+                'year':'',
+                'term':'',
+                'pylb':'',
+        }
+
     def menu(self):
         self.printUser()
         print 'Please input number to choose function'
@@ -44,10 +49,24 @@ class JWXT:
 
     def getUserMark(self):
         error = None
+        year = raw_input('Please enter the year(XXXX-XXXX):')
+        if(year == '-1'):
+            return
+        term = raw_input('Please enter the term:')
+        if(term == '-1'):
+            return
+        pylb = raw_input('Please enter the class(XX):')
+        if(pylb == '-1'):
+            return
+        self.data = {
+            'year':year,
+            'term':term,
+            'pylb':pylb,
+        }
         print 'Please input the username that you want to get mark.'
-        print "Or input \"ALL\" to get all users' mark"
+        print "Or input \"alluser\" to get all users' mark"
         print 'And enter back to go back to the menu'
-        username = input('Please input the username:')
+        username = raw_input('Please input the username:')
         if username == 'back' :
             return self.menu()
         error = self.is_valid(username, 'Mirror', 'getMark')
@@ -114,6 +133,13 @@ class JWXT:
             print i
         g.close()
 
+    def getUsername(self):
+        g = self.connect_db()
+        cur = g.cursor().execute('select username from users')
+        userList = [str(row[0])  for row in cur.fetchall()]
+        g.close()
+        return userList
+   
     def is_valid(self, username, password, s):
         g = self.connect_db()
         error = None
@@ -133,10 +159,10 @@ class JWXT:
         elif(s == 'getMark'):
             cur = g.cursor().execute('select username from users')
             userList = [str(row[0])  for row in cur.fetchall()]
-            print userList
-            print username
             if str(username) not in userList:
                 error = 'Cannot find the user.'
+            if username == 'alluser' :
+                error = None
         g.close()
         return error
 
@@ -158,9 +184,9 @@ class JWXT:
         crypto = binascii.b2a_hex(crypto)
         return crypto
 
-    def getCaptcha(self):
+    def getCaptcha(self, session):
         print 'Downloading the captcha...'
-        self.cpatchaJPG = self.session.get(self.captchaUrl)
+        self.cpatchaJPG = session.get(self.captchaUrl)
         fp = open(self.captchaSite,"w+")
         fp.write(self.cpatchaJPG.content)
 
@@ -171,26 +197,31 @@ class JWXT:
         return text.replace(' ','').strip()
 
     def getMarkBegin(self, username):
-        if username == 'ALL':
-            print 'aha'
+        if username == 'alluser':
+            userList = self.getUsername()
+            for username in userList:
+                self.nowUsername = username
+                self.login(username)
         else:
+            self.nowUsername = username
             self.login(username)
+
     def login(self,username):
+            session = requests.Session()
             self.tryTime+=1
             print 'This is #%d try in %s' % (self.tryTime, username) 
-            self.getCaptcha()
+            self.getCaptcha(session)
             self.cpatcha = self.killCpatcha()
             data = {
                 'username':username,
                 'password':self.getPassword(username),
                 'captcha':self.cpatcha
         	}
-            print self.getPassword(username)
-            response = self.session.post(self.loginUrl, data).content
+            response = session.post(self.loginUrl, data).content
             if(response.find(self.loginSuccess) != -1) :
                 print 'Login Success'
                 self.tryTime = 0
-                self.getMark()
+                self.getMark(session)
             else :
                 print 'Login failed.'
                 if(self.tryTime > 2):
@@ -200,23 +231,10 @@ class JWXT:
                 self.login(username)
             return response    
 
-    def getMark(self):
-            year = raw_input('Please enter the year(XXXX-XXXX):')
-            if(year == '-1'):
-                return
-            term = raw_input('Please enter the term:')
-            if(term == '-1'):
-                return
-            pylb = raw_input('Please enter the class(XX):')
-            if(pylb == '-1'):
-                return
-            data = {
-                'year':year,
-                'term':term,
-                'pylb':pylb,
-            }
+    def getMark(self, session):
             print 'Getting the score data...'
-            response = self.session.get(self.markUrl, params = data).content
+            print '----------------------***Username:%s***----------------------' % (self.nowUsername)
+            response = session.get(self.markUrl, params = self.data).content
             score = re.findall(self.markMatch, response)
             #scoreNoTeacher = re.findall(self.markMatchNoTeacher, response)
             for s in score:
