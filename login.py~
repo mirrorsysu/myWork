@@ -4,20 +4,14 @@ __author__ = 'Hejing'
 import jwxt
 import glxt
 import mail
-import time
-import time
 
-#软件登录的界面设计
 class GNYM():
     def __init__(self):
-        #软件登录管理系统的创建
         self.glxtLogin = glxt.GLXT()
 
     def menu(self):
         username = self.glxtLogin.menu()
-        if username == -1:
-            return
-        elif username == None:
+        if username == None:
             return self.menu()
         self.chooseFunction(username)
         return self.menu()
@@ -25,12 +19,13 @@ class GNYM():
     def chooseFunction(self,username):
         text=(
             "",
+            '*--author by mirrorsysu--*',
+            '*--It\'s my honor to help you--*',
             "*--Welcome to the learning helper--*",
             "*--Please input number to choose function--*",
             "*--1.about jwxt--*",
             "*--2.about email--*",
-            "*--3.keep login in SYSU wifi--*",
-            "*--4.log out--*",
+            "*--3.log out--*"
             ""
             )
         self.printText(text)
@@ -51,27 +46,14 @@ class GNYM():
             getAttachment = mail.MAIL(mailAddress, mailPassword)
             getAttachment.getMailAttachment()
         elif choose == '3':
-            text = (
-                "",
-                "*--Keep login in SYSU wifi and auto reconnect--*",
-                "*--However this function still has many bug, what a pity!--*",
-                ""
-            )
-            self.printText(text)
-            netId = raw_input('Please input your Netid.')
-            netIdPassword = raw_input('Please input your password.')
-            keepWifiLogin = KWLI(netId, netIdPassword)
-            keepWifiLogin.keepLogin()
-        elif choose == '4':
             self.glxtLogin.logout();
             return self.menu()
         else:
             print 'Your input is not legal.'
 
-    def printText(self,text,sleepTime = 0.1):
+    def printText(self,text):
         for string1 in text:
-            time.sleep(sleepTime)
-            print string1.center( 70 )
+            print string1.center( 50 )
 
 if __name__ == '__main__':      
     gnym = GNYM()

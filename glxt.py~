@@ -100,9 +100,7 @@ class GLXT:
         )
         self.printText(text)
         error = None
-        #错误信息
         username = raw_input('Please input the username:')
-        #若输入为back则返回上一级
         if username == 'back' :
             return self.menu()
         password = raw_input('Please input the password:')
