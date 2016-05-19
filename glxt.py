@@ -8,16 +8,16 @@ import time
 #软件登录管理系统
 class GLXT:
     def __init__(self):
-	    #账户数据库路径
+        #账户数据库路径
         self.userdateSite = 'userdate.db'
-	    #教务系统账户数据库路径	
+        #教务系统账户数据库路径	
         self.jwxtSite = ''	
-	    #数据库创建格式路径
+        #数据库创建格式路径
         self.userdateSchema = 'userdateSchema.sql'	
         self.jwxtSchema = 'jwxtSchema.sql'
         self.log_in = 0
         self.username = ''
-	    #判断数据库是否存在，无则创建
+        #判断数据库是否存在，无则创建
         try:
             open(self.userdateSite,"r")
         except Exception,e:

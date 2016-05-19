@@ -1,7 +1,5 @@
 # -*- coding: UTF-8 -*-
 __author__ = 'Hejing'
-
-
 import time
 import requests
 import urllib2
@@ -11,33 +9,33 @@ import time
 #保持SYSU wifi登录
 class KWLI:
     def __init__(self,username,password):
-        #SYSU wifi登录地址
+	    #SYSU wifi登录地址
         self.loginUrl = 'http://10.10.2.22/portal/logon.cgi'
-        #netid以及密码
+    	#netid以及密码
         self.username = username
         self.password = password
-        #判断是否登录的字符串
+    	#判断是否登录的字符串
         self.LoginSuccess = '上线成功'
         self.isLogin = '用户登录'
-        #记录是否登录
+    	#记录是否登录
         self.login = 0
 
     #保持登录SYSU wifi
     def keepLogin(self):
         session = requests.Session()
-        #登录时post的data
+	    #登录时post的data
         dataLogin = {
             'PtUser':self.username,
             'PtPwd':self.password,
             'PtButton':'logon',
         }
-        #离线时post的data
+	    #离线时post的data
         dataLogoff = {
             'PtButton':'logoff',
         }
-        #登录wifi并获得返回网页内容
+	    #登录wifi并获得返回网页内容
         response = session.post(self.loginUrl, dataLogin).content
-        #重新编码
+	    #重新编码
         response = unicode(response, "gb2312").encode("utf8")
         #link start!   
         if self.is_login(response) == 1:
@@ -69,6 +67,6 @@ class KWLI:
         elif response.find(self.isLogin) != -1:
             return 2
         else :
-            #掉线或登录失败
+        #掉线或登录失败
             return 0
 

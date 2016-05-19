@@ -12,13 +12,13 @@ from email import parser
 #利用pop3模组下载邮件附件
 class MAIL:
     def __init__(self,username,password):
-        #163邮箱pop3地址
+	    #163邮箱pop3地址
         self.mail = poplib.POP3_SSL('pop.163.com')
-        #邮箱地址以及密码
+	    #邮箱地址以及密码
         self.username = username
         self.password = password
 
-    #连接邮箱并获得邮件内容
+	#连接邮箱并获得邮件内容
     def getMailAttachment(self):
         #连接邮箱
         self.connect_mail()

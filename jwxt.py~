@@ -73,18 +73,23 @@ class JWXT:
             #非法输入
             print 'Your input is not legal.'
             self.menu()
-
+    
+    #获得用户成绩
     def getUserMark(self):
         error = None
+        #输出查询学年
         year = raw_input('Please enter the year(XXXX-XXXX):')
         if(year == '-1'):
             return
+        #输入查询学期
         term = raw_input('Please enter the term:')
         if(term == '-1'):
             return
+        #输入查询类别
         pylb = raw_input('Please enter the class(XX):')
         if(pylb == '-1'):
             return
+        #产生data
         self.data = {
             'year':year,
             'term':term,
@@ -98,16 +103,22 @@ class JWXT:
         ''
         )
         self.printText(text)
+        #输入查询用户，若为alluser则全部查询
         username = raw_input('Please input the username:')
+        #输入为back则返回
         if username == 'back' :
             return self.menu()
+        #判断用户名密码是否有效
         error = self.is_valid(username, 'Mirror', 'getMark')
         if error is None:
+                #开始获得成绩
                 self.getMarkBegin(username)
         else:
+            #发生错误
             print error
             return self.menu()
 
+    #添加用户
     def addUser(self):
         text = (
         '',
@@ -117,19 +128,25 @@ class JWXT:
         )
         self.printText(text)
         error = None
+        #输入用户名，back返回
         username = raw_input('Please input the username:')
         if username == 'back' :
             return self.menu()
+        #输入密码
         password = raw_input('Please input the password:')
+        #判断账户名密码是否有效
         error = self.is_valid(username, password, 'add')
         if error is None:
+            #向数据库插入账户
             self.insertUser(username, password)
             print 'Add success.'
             return self.menu()
         else:
+            #发生错误
             print error
             return self.menu()
 
+    #删除用户
     def deleteUser(self):
         text = (
         '',
@@ -139,157 +156,224 @@ class JWXT:
         )
         self.printText(text)
         error = None
+        #输入要删除的用户名，back返回
         username = raw_input('Please input the username:')
         if username == 'back' :
             return self.menu()
+        #判断用户名是否有效
         error = self.is_valid(username, 'Mirror', 'delete')
         if error is None:
+            #删除账户
             self.eraseUser(username)
             print 'Delete success.'
             return self.menu()
         else:
+            #发生错误
             print error
             return self.menu()
 
+    #向数据库插入文件
     def insertUser(self, username, password):
+        #连接数据库        
         g = self.connect_db()
+        #加密密码 md5+rsa
         encrypt_password = self.encryptPassword(password)
+        #插入账户名密码
         g.execute('insert into users(username,password) values (?, ?)',
                          [username, encrypt_password])
+        #提交更改        
         g.commit()
+        #关闭数据库连接
         g.close()
 
+    #在数据库删除账户
     def eraseUser(self, username):
+        #连接数据库
         g = self.connect_db()
+        #删除账户
         g.execute('delete from users where username = (?)',
                          [username])
         g.commit()
         g.close()
-
+    
+    #打印所有的教务系统账户
     def printUser(self):
+        #连接数据库
         g = self.connect_db()
+        #选取所有的账户名
         cur = g.cursor().execute('select username from users')
+        #打印所有的账户
         userList = [str(row[0])  for row in cur.fetchall()]
         print 'Now the userlist is:'
         for i in userList:
             print i
         g.close()
 
+    #返回所有的账户名
     def getUsername(self):
+        #连接数据库
         g = self.connect_db()
+        #选取所有的账户名        
         cur = g.cursor().execute('select username from users')
         userList = [str(row[0])  for row in cur.fetchall()]
         g.close()
         return userList
    
+    #判断账户名密码输入是否有效
     def is_valid(self, username, password, s):
-        g = self.connect_db()
         error = None
+        #账户名密码不能为空
         if username == '' or password == '':
             error = 'The username and password could not be empty.'
             return error
+        #添加账户时
         if(s == 'add'):
-            cur = g.cursor().execute('select username from users')
-            userList = [str(row[0])  for row in cur.fetchall()]
+            #获得用户名
+            userList = self.getUsername()
+            #用户名已存在
             if str(username) in userList:
                 error = 'the user has been added.'
+        #删除账户时        
         elif(s == 'delete'):
-            cur = g.cursor().execute('select username from users')
-            userList = [str(row[0])  for row in cur.fetchall()]
+            #获得用户名
+            userList = self.getUsername()
+            #无法找到用户名
             if str(username) not in userList:
                 error = 'Cannot find the user.'
+        #获得成绩时        
         elif(s == 'getMark'):
-            cur = g.cursor().execute('select username from users')
-            userList = [str(row[0])  for row in cur.fetchall()]
+            #获得用户名
+            userList = self.getUsername()
+            #无法找到用户名
             if str(username) not in userList:
                 error = 'Cannot find the user.'
             if username == 'alluser' :
                 error = None
-        g.close()
         return error
 
+    #返回密码
     def getPassword(self,username):
+        #连接数据库
         g = self.connect_db()
+        #获得用户名对应的密码
         cur = g.cursor().execute('select password from users where username = (?)',
             [username])
         passwordList = [str(row[0])  for row in cur.fetchall()]
+        #返回密码
         return passwordList[0]
         g.close()
 
+    #加密密码
     def encryptPassword(self, password): 
-        m = hashlib.md5()   
-        m.update(password)   
+        #创建md5
+        m = hashlib.md5()
+        #密码用md5加密   
+        m.update(password)
+        #公钥   
         pubkey = 'b6b992d57695d296c6de1ee330a464bf30f21ead1af10fd923a109e9b32efbc1d197663163818f3537c92944f780d7ba00bf830c073974d67d2adfb8bb89306b'
         rsaPublickey = int(pubkey, 16)
-        key = rsa.PublicKey(rsaPublickey, 65537) #创建公钥
+        #创建公钥
+        key = rsa.PublicKey(rsaPublickey, 65537) 
+        #将密码用rsa加密
         crypto = rsa.encrypt(m.hexdigest().upper(), key)
         crypto = binascii.b2a_hex(crypto)
         return crypto
 
+    #下载验证码
     def getCaptcha(self, session):
         print 'Downloading the captcha...'
+        #打开验证码地址并下载
         self.cpatchaJPG = session.get(self.captchaUrl)
         fp = open(self.captchaSite,"w+")
         fp.write(self.cpatchaJPG.content)
 
+    #绕过验证码
     def killCpatcha(self):
+        #打开验证码图片并解析
         im = Image.open(self.captchaSite)
         text = image_to_string(im)
         im.close()
         return text.replace(' ','').strip()
 
+    #开始获取成绩
     def getMarkBegin(self, username):
+        #若为alluser则获取所有账户
         if username == 'alluser':
+            #获取所有账户
             userList = self.getUsername()
+            #遍历所有用户名
             for username in userList:
                 self.nowUsername = username
+                #line start!                
                 self.login(username)
+        #获取单个用户成绩
         else:
             self.nowUsername = username
+            #link start!
             self.login(username)
 
-    def login(self,username):
-            session = requests.Session()
-            self.tryTime+=1
-            print 'This is #%d try in %s' % (self.tryTime, username) 
-            self.getCaptcha(session)
-            self.cpatcha = self.killCpatcha()
-            data = {
-                'username':username,
-                'password':self.getPassword(username),
-                'captcha':self.cpatcha
-        	}
-            response = session.post(self.loginUrl, data).content
-            if(response.find(self.loginSuccess) != -1) :
-                print 'Login Success'
+    #link start!
+    def login(self,username):            
+        session = requests.Session()
+        #尝试次数+1
+        self.tryTime+=1
+        print 'This is #%d try in %s' % (self.tryTime, username)
+        #获取验证码 
+        self.getCaptcha(session)
+        #绕过验证码
+        self.cpatcha = self.killCpatcha()
+        #生成登录data
+        data = {
+            'username':username,
+            'password':self.getPassword(username),
+            'captcha':self.cpatcha
+        }
+        #获得登录页面的内容
+        response = session.post(self.loginUrl, data).content
+        #登录成功
+        if(response.find(self.loginSuccess) != -1) :
+            print 'Login Success'
+            self.tryTime = 0
+            #开始获取成绩                
+            self.getMark(session)
+        else :
+            #登录失败
+            print 'Login failed.'
+            #尝试次数大于3
+            if(self.tryTime > 2):
+                #返回
+                print'Login failed. Please check your username and password.'
                 self.tryTime = 0
-                self.getMark(session)
-            else :
-                print 'Login failed.'
-                if(self.tryTime > 2):
-                    print'Login failed. Please check your username and password.'
-                    self.tryTime = 0
-                    return self.getUserMark()
-                self.login(username)
-            return response    
+                return self.getUserMark()
+                #尝试次数小于3则继续尝试
+            self.login(username)
+        #返回登录页面内容
+        return response    
 
+    #获得用户成绩
     def getMark(self, session):
-            print 'Getting the score data...'
-            print '----------------------***Username:%s***----------------------' % (self.nowUsername)
-            response = session.get(self.markUrl, params = self.data).content
-            score = re.findall(self.markMatch, response)
-            #scoreNoTeacher = re.findall(self.markMatchNoTeacher, response)
-            for s in score:
-                string = r"Subject Name: {name}   Teacher's name: {tname}   Credit: {credit}   Score: {score}   Point: {point} Rank: {rank}/{total}".format(name = s[0], tname = s[4], credit = s[1], score = s[2], point = s[3], rank = s[5], total = s[6])
-                print string
-            print '----------------------***Username:%s***----------------------' % (self.nowUsername)
+        print 'Getting the score data...'
+        print '----------------------***Username:%s***----------------------' % (self.nowUsername)
+        #获得成绩页面内容        
+        response = session.get(self.markUrl, params = self.data).content
+        #用正则表达式匹配成绩内容
+        score = re.findall(self.markMatch, response)
+        #scoreNoTeacher = re.findall(self.markMatchNoTeacher, response)
+        #遍历成绩内容并格式化输出        
+        for s in score:
+            string = r"Subject Name: {name}   Teacher's name: {tname}   Credit: {credit}   Score: {score}   Point: {point} Rank: {rank}/{total}".format(name = s[0], tname = s[4], credit = s[1], score = s[2], point = s[3], rank = s[5], total = s[6])
+            print string
+        print '----------------------***Username:%s***----------------------' % (self.nowUsername)
             #for s in scoreNoTeacher:
                 #string = r"Subject Name: {name}   Teacher's name: NULL   Credit: {credit}   Score: {score}   Point: {point} Rank: {rank}/{total}".format(name = s[0],  credit = s[1], score = s[2], point = s[3], rank = s[4], total = s[5])
                 #print string
             #self.getMark()
+
+    #连接数据库
     def connect_db(self):
         return sqlite3.connect(self.dbSite)
-
+    
+    #格式化输出
     def printText(self,text,sleepTime = 0.1):
         for string1 in text:
             time.sleep(sleepTime)
