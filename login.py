@@ -1,11 +1,13 @@
 # -*- coding: UTF-8 -*-
 __author__ = 'Hejing'
 
+
 import jwxt
 import glxt
 import mail
+import keepWifiLogin
 import time
-import time
+
 
 #软件登录的界面设计
 class GNYM():
@@ -72,8 +74,8 @@ class GNYM():
             netId = raw_input('Please input your Netid.')
             netIdPassword = raw_input('Please input your password.')
             #保持登录wifi
-            keepWifiLogin = KWLI(netId, netIdPassword)
-            keepWifiLogin.keepLogin()
+            keepLogin = keepWifiLogin.KWLI(netId, netIdPassword)
+            keepLogin.keepLogin()
         elif choose == '4':
             #注销当前用户
             self.glxtLogin.logout();
